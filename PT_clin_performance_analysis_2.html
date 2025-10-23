@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PT Clinic Performance Monitoring Dashboards</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2em;
+            font-style: italic;
+        }
+
+        .dashboard-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 10px;
+        }
+
+        .tab-button {
+            padding: 15px 25px;
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            margin: 0 5px;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .tab-button:hover:not(.active) {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .dashboard-content {
+            display: none;
+        }
+
+        .dashboard-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .kpi-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .kpi-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .kpi-trend {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .trend-up {
+            color: #2ecc71;
+        }
+
+        .trend-down {
+            color: #e74c3c;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+
+        .chart-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .chart-canvas {
+            position: relative;
+            height: 300px;
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .insights-panel {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .insights-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .insight-item {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .insight-item::before {
+            content: "💡";
+            position: absolute;
+            left: 0;
+        }
+
+        .alert-high {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .alert-medium {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .filters-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.9em;
+        }
+
+        select, input {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        .export-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .export-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-tabs {
+                flex-direction: column;
+            }
+            
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>PT Clinic Performance Analytics</h1>
+            <p>Real-time Monitoring & Business Intelligence Dashboard</p>
+        </div>
+
+        <div class="dashboard-tabs">
+            <button class="tab-button active" onclick="showDashboard('executive')">Executive Summary</button>
+            <button class="tab-button" onclick="showDashboard('financial')">Financial Performance</button>
+            <button class="tab-button" onclick="showDashboard('operations')">Operations Analytics</button>
+        </div>
+
+        <!-- Executive Summary Dashboard -->
+        <div id="executive" class="dashboard-content active">
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label class="filter-label">Time Period</label>
+                    <select>
+                        <option>Last 12 Months</option>
+                        <option>Last 6 Months</option>
+                        <option>Last Quarter</option>
+                        <option>Current Month</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Location</label>
+                    <select>
+                        <option>All Locations</option>
+                        <option>Main Campus</option>
+                        <option>North Branch</option>
+                        <option>South Branch</option>
+                    </select>
+                </div>
+                <button class="export-button">Export Report</button>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-value">$847K</span>
+                    <div class="kpi-label">Annual EBITDA</div>
+                    <div class="kpi-trend trend-up">↑ 18.5% vs last year</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">$142</span>
+                    <div class="kpi-label">Avg Patient Visit Value</div>
+                    <div class="kpi-trend trend-up">↑ 12.3% vs last month</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">87.4%</span>
+                    <div class="kpi-label">Provider Utilization</div>
+                    <div class="kpi-trend trend-up">↑ 5.2% vs target</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">4.7/5</span>
+                    <div class="kpi-label">Patient Satisfaction</div>
+                    <div class="kpi-trend trend-up">↑ 0.3 vs last quarter</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <div class="chart-title">EBITDA Trend Analysis</div>
+                    <div class="chart-canvas">
+                        <canvas id="ebitdaChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Patient Visit Value by Month</div>
+                    <div class="chart-canvas">
+                        <canvas id="visitValueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insights-panel">
+                <div class="insights-title">Key Performance Insights</div>
+                <div class="insight-item">EBITDA margin improved 3.2% this quarter due to optimized scheduling and reduced overhead</div>
+                <div class="insight-item">Patient visit value increased following implementation of wellness program upsells</div>
+                <div class="insight-item">Provider utilization exceeded target by 5.2%, indicating successful workflow optimization</div>
+                <div class="insight-item">Patient satisfaction scores show consistent improvement across all service areas</div>
+            </div>
+        </div>
+
+        <!-- Financial Performance Dashboard -->
+        <div id="financial" class="dashboard-content">
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label class="filter-label">Revenue Stream</label>
+                    <select>
+                        <option>All Services</option>
+                        <option>Traditional PT</option>
+                        <option>Wellness Programs</option>
+                        <option>Equipment Sales</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Payer Type</label>
+                    <select>
+                        <option>All Payers</option>
+                        <option>Commercial Insurance</option>
+                        <option>Medicare</option>
+                        <option>Self-Pay</option>
+                    </select>
+                </div>
+                <button class="export-button">Export Financial Data</button>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-value">$2.4M</span>
+                    <div class="kpi-label">Annual Revenue</div>
+                    <div class="kpi-trend trend-up">↑ 15.8% YoY</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">35.2%</span>
+                    <div class="kpi-label">EBITDA Margin</div>
+                    <div class="kpi-trend trend-up">↑ 2.1% vs target</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">22 days</span>
+                    <div class="kpi-label">Days Sales Outstanding</div>
+                    <div class="kpi-trend trend-down">↓ 8 days vs last quarter</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">94.3%</span>
+                    <div class="kpi-label">Collection Rate</div>
+                    <div class="kpi-trend trend-up">↑ 3.7% vs industry avg</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Revenue by Service Line</div>
+                    <div class="chart-canvas">
+                        <canvas id="revenueBreakdownChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Monthly Cash Flow</div>
+                    <div class="chart-canvas">
+                        <canvas id="cashFlowChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-table">
+                <div class="table-header">Financial Performance by Location</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Location</th>
+                            <th>Monthly Revenue</th>
+                            <th>EBITDA</th>
+                            <th>Margin %</th>
+                            <th>Growth Rate</th>
+                            <th>Patients/Month</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Main Campus</td>
+                            <td>$124,500</td>
+                            <td>$47,300</td>
+                            <td>38.0%</td>
+                            <td class="trend-up">+12.4%</td>
+                            <td>890</td>
+                        </tr>
+                        <tr>
+                            <td>North Branch</td>
+                            <td>$96,200</td>
+                            <td>$32,100</td>
+                            <td>33.4%</td>
+                            <td class="trend-up">+18.7%</td>
+                            <td>675</td>
+                        </tr>
+                        <tr>
+                            <td>South Branch</td>
+                            <td>$78,900</td>
+                            <td>$24,800</td>
+                            <td>31.4%</td>
+                            <td class="trend-up">+8.2%</td>
+                            <td>542</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="insights-panel alert-medium">
+                <div class="insights-title">Financial Action Items</div>
+                <div class="insight-item">South Branch margin below target - recommend operational review</div>
+                <div class="insight-item">DSO improvement of 8 days generated $45K additional cash flow</div>
+                <div class="insight-item">Wellness program revenue up 34% - consider expansion to North Branch</div>
+            </div>
+        </div>
+
+        <!-- Operations Analytics Dashboard -->
+        <div id="operations" class="dashboard-content">
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label class="filter-label">Metric Type</label>
+                    <select>
+                        <option>All Metrics</option>
+                        <option>Utilization</option>
+                        <option>Patient Flow</option>
+                        <option>Staff Performance</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Department</label>
+                    <select>
+                        <option>All Departments</option>
+                        <option>Orthopedic PT</option>
+                        <option>Neurological PT</option>
+                        <option>Sports Medicine</option>
+                    </select>
+                </div>
+                <button class="export-button">Export Operations Data</button>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-value">6.2</span>
+                    <div class="kpi-label">Patients/Day/Provider</div>
+                    <div class="kpi-trend trend-up">↑ 0.8 vs target</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">8.5 min</span>
+                    <div class="kpi-label">Avg Wait Time</div>
+                    <div class="kpi-trend trend-down">↓ 15 min vs baseline</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">94.1%</span>
+                    <div class="kpi-label">Show Rate</div>
+                    <div class="kpi-trend trend-up">↑ 6.3% vs last year</div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-value">12.8%</span>
+                    <div class="kpi-label">Staff Turnover</div>
+                    <div class="kpi-trend trend-down">↓ 4.2% vs industry</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Provider Utilization by Day</div>
+                    <div class="chart-canvas">
+                        <canvas id="utilizationChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Patient Satisfaction Scores</div>
+                    <div class="chart-canvas">
+                        <canvas id="satisfactionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-table">
+                <div class="table-header">Provider Performance Metrics</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Utilization %</th>
+                            <th>Patients/Day</th>
+                            <th>Satisfaction Score</th>
+                            <th>Revenue/Hour</th>
+                            <th>Productivity Rank</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Dr. Sarah Johnson</td>
+                            <td>92.3%</td>
+                            <td>7.2</td>
+                            <td>4.8/5</td>
+                            <td>$187</td>
+                            <td>1st</td>
+                        </tr>
+                        <tr>
+                            <td>Dr. Michael Chen</td>
+                            <td>89.7%</td>
+                            <td>6.8</td>
+                            <td>4.6/5</td>
+                            <td>$174</td>
+                            <td>2nd</td>
+                        </tr>
+                        <tr>
+                            <td>Dr. Emily Rodriguez</td>
+                            <td>86.2%</td>
+                            <td>6.3</td>
+                            <td>4.9/5</td>
+                            <td>$168</td>
+                            <td>3rd</td>
+                        </tr>
+                        <tr>
+                            <td>Dr. James Wilson</td>
+                            <td>83.1%</td>
+                            <td>5.9</td>
+                            <td>4.5/5</td>
+                            <td>$159</td>
+                            <td>4th</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="insights-panel alert-high">
+                <div class="insights-title">Operational Alerts & Recommendations</div>
+                <div class="insight-item">Dr. Wilson's utilization below 85% threshold - recommend productivity coaching</div>
+                <div class="insight-item">Tuesday afternoon shows lowest utilization - consider marketing push for this slot</div>
+                <div class="insight-item">Average wait time reduced by 65% since scheduling optimization implementation</div>
+                <div class="insight-item">Staff turnover 4.2% below industry average - retention strategies working</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        function showDashboard(dashboardId) {
+            // Hide all dashboard contents
+            const contents = document.querySelectorAll('.dashboard-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab-button');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected dashboard and activate tab
+            document.getElementById(dashboardId).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Initialize charts for the active dashboard
+            setTimeout(() => initializeCharts(dashboardId), 100);
+        }
+
+        // Chart initialization
+        function initializeCharts(dashboardId) {
+            if (dashboardId === 'executive') {
+                createEBITDAChart();
+                createVisitValueChart();
+            } else if (dashboardId === 'financial') {
+                createRevenueBreakdownChart();
+                createCashFlowChart();
+            } else if (dashboardId === 'operations') {
+                createUtilizationChart();
+                createSatisfactionChart();
+            }
+        }
+
+        // EBITDA Trend Chart
+        function createEBITDAChart() {
+            const ctx = document.getElementById('ebitdaChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'EBITDA ($K)',
+                        data: [62, 68, 71, 69, 74, 77, 82, 79, 85, 88, 91, 94],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: '#f0f0f0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Visit Value Chart
+        function createVisitValueChart() {
+            const ctx = document.getElementById('visitValueChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Avg Visit Value ($)',
+                        data: [128, 132, 135, 131, 138, 141, 145, 143, 149, 152, 148, 142],
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: '#667eea',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 120,
+                            grid: {
+                                color: '#f0f0f0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Revenue Breakdown Chart
+        function createRevenueBreakdownChart() {
+            const ctx = document.getElementById('revenueBreakdownChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Traditional PT', 'Wellness Programs', 'Equipment Sales', 'Telehealth', 'Other'],
+                    datasets: [{
+                        data: [68, 18, 8, 4, 2],
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#f5576c',
+                            '#4facfe'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Cash Flow Chart
+        function createCashFlowChart() {
+            const ctx = document.getElementById('cashFlowChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [
+                        {
+                            label: 'Cash Inflow',
+                            data: [195, 208, 215, 202, 225, 238, 245, 241, 258, 262, 268, 275],
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Cash Outflow',
+                            data: [155, 161, 168, 159, 172, 175, 182, 178, 185, 188, 191, 195],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: '#f0f0f0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Utilization Chart
+        function createUtilizationChart() {
+            const ctx = document.getElementById('utilizationChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                    datasets: [
+                        {
+                            label: 'Current Month',
+                            data: [88, 79, 92, 85, 89, 75, 65],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Target',
+                            data: [85, 85, 85, 85, 85, 80, 70],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: '#f0f0f0'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Satisfaction Chart
+        function createSatisfactionChart() {
+            const ctx = document.getElementById('satisfactionChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Overall Care', 'Wait Time', 'Staff Courtesy', 'Facility', 'Treatment Results', 'Scheduling'],
+                    datasets: [{
+                        label: 'Satisfaction Score',
+                        data: [4.7, 4.2, 4.8, 4.5, 4.9, 4.3],
+                        backgroundColor: [
+                            '#2ecc71',
+                            '#f39c12',
+                            '#2ecc71',
+                            '#2ecc71',
+                            '#2ecc71',
+                            '#f39c12'
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 5,
+                            grid: {
+                                color: '#f0f0f0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize default charts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts('executive');
+        });
+
+        // Mock data generation functions for demonstration
+        function generateRandomData(length, min, max) {
+            return Array.from({ length }, () => Math.floor(Math.random() * (max - min + 1)) + min);
+        }
+
+        // Simulate real-time data updates
+        function simulateRealTimeUpdates() {
+            setInterval(() => {
+                // Update KPI values with small random changes
+                const kpiValues = document.querySelectorAll('.kpi-value');
+                kpiValues.forEach(element => {
+                    const currentValue = element.textContent;
+                    // Add small random variation to simulate real-time updates
+                    // This would connect to actual data sources in production
+                });
+            }, 30000); // Update every 30 seconds
+        }
+
+        // Export functionality
+        function exportDashboardData(format = 'pdf') {
+            // In a real implementation, this would generate actual exports
+            alert(`Exporting dashboard data to ${format.toUpperCase()} format...`);
+        }
+
+        // Start real-time simulation
+        simulateRealTimeUpdates();
+    </script>
+</body>
+</html>
